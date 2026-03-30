@@ -46,10 +46,13 @@ Open `http://localhost:5173`.
 
 - `GET /api/health`
 - `POST /api/train`
+- `GET /api/train/checkpoints`
 - `POST /api/attack/run`
 - `POST /api/detect`
 - `POST /api/defend`
 - `POST /api/report`
+- `GET /api/report/{run_id}`
+- `GET /api/report/{run_id}/download?format=json|txt`
 - `POST /api/agent/recommend`
 - `GET /api/experiments`
 
@@ -102,6 +105,11 @@ Notes:
 - Local artifacts under `artifacts/images`, `artifacts/reports`, and `artifacts/models` are git-ignored.
 - `.env*`, local venv folders, and frontend build/cache folders are git-ignored.
 - `.gitattributes` marks model/image files as binary for safer diffs.
+
+Dashboard additions:
+
+- Load available checkpoints directly from backend and select one for attack execution.
+- Download generated reports as JSON or TXT from the UI.
 
 ## Notes
 

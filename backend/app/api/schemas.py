@@ -153,3 +153,16 @@ class ExperimentSummary(BaseModel):
 
 class ExperimentListResponse(BaseModel):
     experiments: list[ExperimentSummary]
+
+
+class CheckpointSummary(BaseModel):
+    checkpoint_id: str
+    path: str
+    dataset: DatasetName
+    model_name: ModelName
+    created_at: str
+    size_mb: float
+
+
+class CheckpointListResponse(BaseModel):
+    checkpoints: list[CheckpointSummary]

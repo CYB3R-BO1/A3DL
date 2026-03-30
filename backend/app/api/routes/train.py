@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
-from app.api.schemas import TrainRequest, TrainResponse
+from app.api.schemas import CheckpointListResponse, CheckpointSummary, TrainRequest, TrainResponse
 from app.config import settings
+from app.services.model_service import list_checkpoints
 from app.services.training_service import train_and_save_checkpoint
 
 router = APIRouter()
@@ -18,3 +19,9 @@ def train_model(payload: TrainRequest) -> TrainResponse:
         device=settings.device,
     )
     return TrainResponse(**result)
+
+
+@router.get("/train/checkpoints", response_model=CheckpointListResponse)
+def get_checkpoints(limit: int = Query(default=100, ge=1, le=500)) -> CheckpointListResponse:
+    checkpoints = list_checkpoints(limit=limit)
+    return CheckpointListResponse(checkpoints=[CheckpointSummary(**cp) for cp in checkpoints])

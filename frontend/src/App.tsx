@@ -1,7 +1,7 @@
 import { ChangeEvent, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { listExperiments, runAttack, runDefend, runDetect, runReport, trainModel } from "./services/api";
+import { downloadReport, listCheckpoints, listExperiments, runAttack, runDefend, runDetect, runReport, trainModel } from "./services/api";
 
 type AttackData = {
   run_id: string;
@@ -32,6 +32,7 @@ export function App() {
   const [reportData, setReportData] = useState<any>(null);
   const [trainData, setTrainData] = useState<any>(null);
   const [checkpointPath, setCheckpointPath] = useState("");
+  const [checkpoints, setCheckpoints] = useState<any[]>([]);
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +101,23 @@ export function App() {
       setHistoryData(data.experiments ?? []);
     } catch (e: any) {
       setError(e.message ?? "Failed to load experiment history");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadCheckpoints() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await listCheckpoints(100);
+      const items = data.checkpoints ?? [];
+      setCheckpoints(items);
+      if (!checkpointPath && items.length > 0) {
+        setCheckpointPath(items[0].path);
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load checkpoints");
     } finally {
       setLoading(false);
     }
@@ -185,6 +203,22 @@ export function App() {
             placeholder="../artifacts/models/cifar10_simple_cnn_*.pt"
           />
 
+          <button className="mb-2 w-full rounded border border-ink px-3 py-2 text-ink disabled:opacity-40" onClick={loadCheckpoints} disabled={loading}>
+            Load Checkpoints
+          </button>
+          <select
+            className="mb-4 w-full rounded border p-2"
+            value={checkpointPath}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => setCheckpointPath(e.target.value)}
+          >
+            <option value="">Select checkpoint (optional)</option>
+            {checkpoints.map((cp) => (
+              <option key={`${cp.path}-${cp.checkpoint_id}`} value={cp.path}>
+                {cp.dataset}/{cp.model_name} :: {cp.checkpoint_id}
+              </option>
+            ))}
+          </select>
+
           <button className="mb-2 w-full rounded bg-mint px-3 py-2 text-ink disabled:opacity-40" onClick={executeTrain} disabled={loading}>
             Train + Save Checkpoint
           </button>
@@ -248,6 +282,24 @@ export function App() {
 
         <section className="rounded-lg bg-white p-4 shadow-sm lg:col-span-3">
           <h2 className="mb-3 text-lg font-semibold">Detection / Defense / Report</h2>
+          {attackData && (
+            <div className="mb-3 flex gap-2">
+              <button
+                className="rounded border border-ink px-3 py-2 text-sm text-ink disabled:opacity-40"
+                onClick={() => downloadReport(attackData.run_id, "json")}
+                disabled={loading}
+              >
+                Download Report JSON
+              </button>
+              <button
+                className="rounded border border-ink px-3 py-2 text-sm text-ink disabled:opacity-40"
+                onClick={() => downloadReport(attackData.run_id, "txt")}
+                disabled={loading}
+              >
+                Download Report TXT
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <JsonCard title="Detection" data={detectData} />
             <JsonCard title="Defense" data={defendData} />

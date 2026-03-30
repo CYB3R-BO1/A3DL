@@ -52,3 +52,28 @@ export async function listExperiments(limit = 50) {
   const { data } = await api.get("/experiments", { params: { limit } });
   return data;
 }
+
+export async function listCheckpoints(limit = 100) {
+  const { data } = await api.get("/train/checkpoints", { params: { limit } });
+  return data;
+}
+
+export async function downloadReport(runId: string, format: "json" | "txt") {
+  const response = await api.get(`/report/${runId}/download`, {
+    params: { format },
+    responseType: "blob",
+  });
+
+  const blob = new Blob([response.data], {
+    type: format === "json" ? "application/json" : "text/plain",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `report_${runId}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
