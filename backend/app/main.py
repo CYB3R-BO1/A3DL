@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import agent, attack, defend, detect, experiments, health, report, train
+from app.api.routes import agent, attack, defend, detect, experiments, health, jobs, models, report, train
 from app.config import settings
 
 
@@ -24,6 +24,8 @@ def create_app() -> FastAPI:
     app.include_router(agent.router, prefix="/api", tags=["agent"])
     app.include_router(train.router, prefix="/api", tags=["train"])
     app.include_router(experiments.router, prefix="/api", tags=["experiments"])
+    app.include_router(jobs.router, prefix="/api", tags=["jobs"])
+    app.include_router(models.router, prefix="/api", tags=["models"])
     return app
 
 

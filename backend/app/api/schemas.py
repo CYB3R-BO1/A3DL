@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -18,6 +19,7 @@ class AttackRequest(BaseModel):
     sample_limit: int = Field(default=64, ge=1, le=2048)
     batch_size: int = Field(default=32, ge=1, le=256)
     checkpoint_path: str | None = None
+    model_id: str | None = Field(default=None, description="UUID of uploaded model (takes precedence over checkpoint_path)")
 
 
 class PredictionInfo(BaseModel):
@@ -77,6 +79,7 @@ class DefendRequest(BaseModel):
     dataset: DatasetName = Field(default="cifar10")
     gaussian_sigma: float = Field(default=0.03, ge=0.0, le=1.0)
     bit_depth_bits: int = Field(default=4, ge=1, le=8)
+    model_id: str | None = Field(default=None, description="UUID of model to use (optional)")
 
 
 class DefendResponse(BaseModel):
@@ -124,6 +127,7 @@ class TrainRequest(BaseModel):
     batch_size: int = Field(default=64, ge=1, le=512)
     learning_rate: float = Field(default=1e-3, gt=0.0, le=1.0)
     max_batches_per_epoch: int = Field(default=100, ge=1, le=2000)
+    model_id: str | None = Field(default=None, description="UUID of model to fine-tune (optional)")
 
 
 class TrainResponse(BaseModel):
@@ -166,3 +170,80 @@ class CheckpointSummary(BaseModel):
 
 class CheckpointListResponse(BaseModel):
     checkpoints: list[CheckpointSummary]
+
+
+class JobStatusEnum(str, Enum):
+    """Job execution status"""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class JobTypeEnum(str, Enum):
+    """Job type"""
+
+    TRAIN = "train"
+    ATTACK = "attack"
+    DEFEND = "defend"
+
+
+class JobResponse(BaseModel):
+    """Response when job is submitted"""
+
+    job_id: str
+    status: JobStatusEnum
+
+
+class JobStatusResponse(BaseModel):
+    """Response with job status and progress"""
+
+    job_id: str
+    job_type: JobTypeEnum
+    status: JobStatusEnum
+    progress: int = Field(ge=0, le=100)
+    error: str | None = None
+
+
+class JobResultWrapper(BaseModel):
+    """Response with job result"""
+
+    job_id: str | None = None
+    status: JobStatusEnum | None = None
+    result: dict | None = None
+    error: str | None = None
+    code: int | None = None
+    message: str | None = None
+
+
+# Model Registry Schemas
+
+
+class ModelUploadResponse(BaseModel):
+    """Response when model is uploaded"""
+
+    model_id: str
+    name: str
+    architecture: str
+    dataset: DatasetName
+    path: str
+    uploaded_at: str
+
+
+class ModelMetadata(BaseModel):
+    """Model metadata"""
+
+    id: str
+    name: str
+    path: str
+    architecture: str
+    dataset: DatasetName
+    uploaded_at: str
+
+
+class ModelListResponse(BaseModel):
+    """List of models"""
+
+    models: list[ModelMetadata]
+

@@ -17,6 +17,7 @@ def train_model(payload: TrainRequest) -> TrainResponse:
         learning_rate=payload.learning_rate,
         max_batches_per_epoch=payload.max_batches_per_epoch,
         device=settings.device,
+        model_id=payload.model_id,
     )
     return TrainResponse(**result)
 

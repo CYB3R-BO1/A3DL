@@ -15,6 +15,7 @@ def run_defense(payload: DefendRequest) -> DefendResponse:
             dataset=payload.dataset,
             gaussian_sigma=payload.gaussian_sigma,
             bit_depth_bits=payload.bit_depth_bits,
+            model_id=payload.model_id,
             device=settings.device,
         )
         return DefendResponse(**data)

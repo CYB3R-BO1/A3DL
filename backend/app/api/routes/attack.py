@@ -19,6 +19,7 @@ def execute_attack(payload: AttackRequest) -> AttackResponse:
             sample_limit=payload.sample_limit,
             batch_size=payload.batch_size,
             checkpoint_path=payload.checkpoint_path,
+            model_id=payload.model_id,
             device=settings.device,
         )
     except ValueError as exc:

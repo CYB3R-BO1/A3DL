@@ -44,6 +44,8 @@ Open `http://localhost:5173`.
 
 ## API Endpoints
 
+### Standard Endpoints
+
 - `GET /api/health`
 - `POST /api/train`
 - `GET /api/train/checkpoints`
@@ -56,6 +58,22 @@ Open `http://localhost:5173`.
 - `POST /api/agent/recommend`
 - `GET /api/experiments`
 
+### Async Job Submission Endpoints (v0.3.0+)
+
+- `POST /api/jobs/train` – Submit training job
+- `POST /api/jobs/attack` – Submit attack job
+- `POST /api/jobs/defend` – Submit defense job
+- `GET /api/jobs` – List recent jobs (query param: `limit=50`)
+- `GET /api/jobs/{job_id}` – Poll job status and progress
+- `GET /api/jobs/{job_id}/result` – Retrieve job result
+
+### Model Registry Endpoints (v0.4.0+)
+
+- `POST /api/models/upload` – Upload and register a PyTorch model
+- `GET /api/models` – List registered models
+- `GET /api/models/{model_id}` – Get model metadata
+- `DELETE /api/models/{model_id}` – Delete a model
+
 ## Example Train Payload
 
 ```json
@@ -67,6 +85,34 @@ Open `http://localhost:5173`.
   "max_batches_per_epoch": 100
 }
 ```
+
+## Async Job Submission Examples (v0.3.0+)
+
+### Submit a training job
+
+```bash
+curl -X POST http://localhost:8000/api/jobs/train \
+  -H "Content-Type: application/json" \
+  -d '{"dataset": "cifar10", "epochs": 2, "batch_size": 64, "learning_rate": 0.001}'
+```
+
+Response: `{"job_id": "job_abc123", "status": "pending"}`
+
+### Poll job status
+
+```bash
+curl http://localhost:8000/api/jobs/job_abc123
+```
+
+Response: `{"job_id": "job_abc123", "job_type": "train", "status": "running", "progress": 45, "error": null}`
+
+### Get job result (after completion)
+
+```bash
+curl http://localhost:8000/api/jobs/job_abc123/result
+```
+
+Response: `{"job_id": "job_abc123", "status": "completed", "result": {...}, "error": null}`
 
 ## Example Attack Payload
 
@@ -81,6 +127,41 @@ Open `http://localhost:5173`.
   "sample_limit": 64,
   "batch_size": 32,
   "checkpoint_path": "../artifacts/models/cifar10_simple_cnn_YYYYMMDDTHHMMSS.pt"
+}
+```
+
+## Model Upload Examples (v0.4.0+)
+
+### Upload a model
+
+```bash
+curl -X POST http://localhost:8000/api/models/upload \
+  -F "file=@/path/to/model.pt" \
+  -F "model_name=my_cifar10_resnet" \
+  -F "architecture=resnet18" \
+  -F "dataset=cifar10"
+```
+
+Response: `{"model_id": "abc123-uuid", "name": "my_cifar10_resnet", "architecture": "resnet18", "dataset": "cifar10", "uploaded_at": "2025-01-15T10:30:00"}`
+
+### List models
+
+```bash
+curl http://localhost:8000/api/models
+```
+
+### Use uploaded model in attack
+
+```json
+{
+  "attack_type": "pgd",
+  "dataset": "cifar10",
+  "model_id": "abc123-uuid",
+  "epsilon": 0.031372549,
+  "alpha": 0.007843137,
+  "steps": 10,
+  "sample_limit": 64,
+  "batch_size": 32
 }
 ```
 

@@ -6,6 +6,7 @@ from PIL import Image
 
 from app.core.defense.input_transforms import bit_depth_reduction, gaussian_noise
 from app.core.models.model_registry import get_model
+from app.services.model_registry import get_model_registry
 from app.storage.run_store import RunStore
 
 
@@ -25,11 +26,21 @@ def _predict(model: torch.nn.Module, x: torch.Tensor) -> torch.Tensor:
         return model(x).argmax(dim=1)
 
 
-def evaluate_defense(run_id: str, dataset: str, gaussian_sigma: float = 0.03, bit_depth_bits: int = 4, device: str = "cpu"):
+def evaluate_defense(run_id: str, dataset: str, gaussian_sigma: float = 0.03, bit_depth_bits: int = 4, model_id: str | None = None, device: str = "cpu", on_progress: callable = None):
     store = RunStore()
     payload = store.load(run_id)
-    model = get_model(dataset=dataset, device=device)
+    
+    # Load model: prefer uploaded model_id, fall back to default architecture
+    if model_id:
+        registry = get_model_registry()
+        model = registry.load_model(model_id, device=device)
+    else:
+        model = get_model(dataset=dataset, device=device)
+    
     is_mnist = dataset == "mnist"
+
+    if on_progress:
+        on_progress(10)
 
     total = 0
     adv_correct = 0
@@ -50,6 +61,9 @@ def evaluate_defense(run_id: str, dataset: str, gaussian_sigma: float = 0.03, bi
     adversarial_accuracy = adv_correct / total if total else 0.0
     defended_accuracy = defended_correct / total if total else 0.0
     robustness_score = max(0.0, defended_accuracy - adversarial_accuracy)
+    
+    if on_progress:
+        on_progress(100)
 
     return {
         "run_id": run_id,

@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 from app.core.models.model_registry import get_model
+from app.services.model_registry import get_model_registry
 
 
 def _build_train_loader(dataset: str, batch_size: int) -> DataLoader:
@@ -27,15 +28,23 @@ def train_and_save_checkpoint(
     learning_rate: float,
     max_batches_per_epoch: int,
     device: str,
+    model_id: str | None = None,
+    on_progress: callable = None,
 ) -> dict:
-    model = get_model(dataset=dataset, device=device)
+    # Load model: prefer uploaded model_id, fall back to default architecture
+    if model_id:
+        registry = get_model_registry()
+        model = registry.load_model(model_id, device=device)
+    else:
+        model = get_model(dataset=dataset, device=device)
+    
     loader = _build_train_loader(dataset=dataset, batch_size=batch_size)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     model.train()
     epoch_losses: list[float] = []
 
-    for _ in range(epochs):
+    for epoch_idx in range(epochs):
         total_loss = 0.0
         seen_batches = 0
         for images, labels in loader:
@@ -54,6 +63,10 @@ def train_and_save_checkpoint(
                 break
 
         epoch_losses.append(total_loss / max(seen_batches, 1))
+        
+        if on_progress:
+            progress = int(100 * (epoch_idx + 1) / epochs)
+            on_progress(progress)
 
     out_dir = Path("../artifacts/models")
     out_dir.mkdir(parents=True, exist_ok=True)

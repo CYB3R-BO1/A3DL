@@ -11,6 +11,7 @@ from app.core.data.dataset_loader import get_loader
 from app.core.models.model_registry import get_model, maybe_load_weights
 from app.core.utils.metrics import confidence_scores
 from app.services.experiment_store import ExperimentStore
+from app.services.model_registry import get_model_registry
 from app.storage.artifact_store import ArtifactStore
 from app.storage.run_store import RunStore
 
@@ -29,11 +30,25 @@ def run_attack(
     steps: int,
     sample_limit: int,
     batch_size: int,
-    checkpoint_path: str | None,
-    device: str,
+    checkpoint_path: str | None = None,
+    model_id: str | None = None,
+    device: str = "cpu",
+    on_progress: callable = None,
 ) -> AttackResponse:
-    model = get_model(dataset=dataset, device=device)
-    model = maybe_load_weights(model=model, weights_path=checkpoint_path, device=device)
+    """
+    Execute an adversarial attack.
+    
+    Args:
+        model_id: UUID of uploaded model (takes precedence over checkpoint_path)
+        checkpoint_path: Path to model weights (legacy support)
+    """
+    # Load model: prefer uploaded model_id, fall back to checkpoint_path
+    if model_id:
+        registry = get_model_registry()
+        model = registry.load_model(model_id, device=device)
+    else:
+        model = get_model(dataset=dataset, device=device)
+        model = maybe_load_weights(model=model, weights_path=checkpoint_path, device=device)
     loader, sample_indices = get_loader(dataset=dataset, sample_limit=sample_limit, batch_size=batch_size)
     attack_config = AttackConfig(epsilon=epsilon, alpha=alpha, steps=steps)
     image_store = ArtifactStore()
@@ -50,7 +65,12 @@ def run_attack(
 
     model.eval()
     idx_offset = 0
-    for images, labels in loader:
+    num_batches = len(loader)
+    
+    if on_progress:
+        on_progress(10)
+    
+    for batch_idx, (images, labels) in enumerate(loader):
         images = images.to(device)
         labels = labels.to(device)
 
@@ -98,6 +118,10 @@ def run_attack(
             )
 
         idx_offset += images.size(0)
+        
+        if on_progress:
+            progress = int(10 + (90 * batch_idx / max(num_batches, 1)))
+            on_progress(progress)
 
     total = len(sample_indices)
     metrics = AttackMetrics(
